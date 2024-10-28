@@ -532,7 +532,7 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         }
     } else{
 
-        logToSheet(nombreHojaLogs, 'REVISAR Control Testeado"' + controlActual + '" ya que tiene la "PRUEBA A REALIZAR" en la fila incorrecta.');
+        logToSheet(nombreHojaLogs, 'REVISAR Control Testeado "' + controlActual + '" ya que tiene la "PRUEBA A REALIZAR" en la fila incorrecta');
     }
 
     var numRangoFrecMuestras = 0;
@@ -623,7 +623,7 @@ function main(){
   var date = new Date();
 
   do {
-    var option = UI.prompt('Introduce el número de la opción que quieres ejecutar:\n (1) -> Copiar IDs de Carpeta Controles Documentados.\n (2) -> Copiar IDs de Carpeta con carpetas y controles.\n (3) -> Comparar controles.\n (4) -> Actualizar Controles Documentados.\n (5) -> Salir.');
+    var option = UI.prompt('Introduce el número de la opción que quieres ejecutar:\n (1) -> Copiar IDs de Carpeta Controles Documentados. \nRecuerda: Los ficheros de Controles deben de estar todos en una sola carpeta.\n (2) -> Copiar IDs de Controles Testeados. \nRecuerda: Los ficheros de Controles deben de encontrarse en carpetas separadas, las cuales se encuentran en una sola carpeta.\n (3) -> Comparar Controles.\n (4) -> Actualizar Controles Documentados.\n (5) -> Salir.');
     switch (option.getResponseText()) {
       case '1':
         var response = UI.prompt("Introduzca el ID de la *CARPETA* que contiene los Controles Documentados:"); 
