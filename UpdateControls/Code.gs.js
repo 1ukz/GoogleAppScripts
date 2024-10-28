@@ -1,9 +1,8 @@
 // CREATOR: LUCAS SAETA (@1ukz) - lucassaeta9@gmail.com
 
 //TODOOOOO 
-// en la funcion de limpiar control creado, hay que hacer verificaciones para no borrar vainas que no debiera por no estar en las posiciones enviadas por args. 
-// copiarControles no funciona bien, mirar logs y hoja principal PRUEBA AGENDA
-// en la docu, al principio el punto 3, explicar las key hojas y apartados importantes: rollo poner - Hoja principal: esta sera l ahoja etc, - Hoja Docus, - Hoja SOX, - Hoja comparaciones.
+// separar en funciones separadas la funcion de actualizar controles (copiarCeldasDesdeControl) ya que es un lio y se puede refactorizar mucho. Tambien, simplemente retocar 
+// celdas que esten mal, en vez de hacer un monton de ifs. 
 
 
 // GLOBAL VARIABLES
@@ -536,11 +535,36 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         logToSheet(nombreHojaLogs, 'REVISAR Control Testeado"' + controlActual + '" ya que tiene la "PRUEBA A REALIZAR" en la fila incorrecta.');
     }
 
-      //Array para el campo de frecuencias y muestras normales para ver si esta acorde, ademas de aniadir estos campos al log tambien 
-      var frecuenciasYMuestras = [
-        {nombreOrigen: 'D' + (numRango-3), origen: 'D' + (numRango-2), nombreDestino: 'D' + (numRango-3), destino: 'D' + (numRango-2)}, 
-        {nombreOrigen: 'E' + (numRango+9-numRangoMuestras), origen: 'F' + (numRango+9-numRangoMuestras), nombreDestino: 'E' + (numRango+9), destino: 'F' + (numRango+9)}
-      ]
+    var numRangoFrecMuestras = 0;
+    var numRangoFrecMuestrasDest = 0;
+
+    // Agrupamos las condiciones con paréntesis para evitar problemas de precedencia
+    if ((hojaOrigen.getRange('A2').getValue() === 'Tipo de Control' || hojaOrigen.getRange('A2').getValue() === 'Clase') && 
+        (hojaDestino.getRange('A2').getValue() === 'Tipo de Control' || hojaDestino.getRange('A2').getValue() === 'Clase')) {      
+      numRangoFrecMuestras = 5;
+      numRangoFrecMuestrasDest = 5;
+    } else if ((hojaOrigen.getRange('A3').getValue() === 'Tipo de Control' || hojaOrigen.getRange('A3').getValue() === 'Clase') && 
+              (hojaDestino.getRange('A3').getValue() === 'Tipo de Control' || hojaDestino.getRange('A3').getValue() === 'Clase')) {
+      numRangoFrecMuestras = 6;
+      numRangoFrecMuestrasDest = 6;
+    } else if ((hojaOrigen.getRange('A3').getValue() === 'Tipo de Control' || hojaOrigen.getRange('A3').getValue() === 'Clase') && 
+              (hojaDestino.getRange('A2').getValue() === 'Tipo de Control' || hojaDestino.getRange('A2').getValue() === 'Clase')) {        
+      numRangoFrecMuestras = 6;
+      numRangoFrecMuestrasDest = 5;
+    } else if ((hojaOrigen.getRange('A2').getValue() === 'Tipo de Control' || hojaOrigen.getRange('A2').getValue() === 'Clase') && 
+              (hojaDestino.getRange('A3').getValue() === 'Tipo de Control' || hojaDestino.getRange('A3').getValue() === 'Clase')) {        
+      numRangoFrecMuestras = 5;
+      numRangoFrecMuestrasDest = 6;
+    } else {  
+      logToSheet(nombreHojaLogs, 'ERROR. Fichero con rango de celdas incorrecto o nombres diferentes. REVISAR: ' + hojaDestinoNombre);
+      continue; 
+    }
+
+    // Array para el campo de frecuencias y muestras normales
+    var frecuenciasYMuestras = [
+      {nombreOrigen: 'D' + (numRangoFrecMuestras - 3), origen: 'D' + (numRangoFrecMuestras - 2), nombreDestino: 'D' + (numRangoFrecMuestrasDest - 3), destino: 'D' + (numRangoFrecMuestrasDest - 2)}, 
+      {nombreOrigen: 'E' + (numRangoFrecMuestras + 9), origen: 'F' + (numRangoFrecMuestras + 9), nombreDestino: 'E' + (numRangoFrecMuestrasDest + 9), destino: 'F' + (numRangoFrecMuestrasDest + 9)}
+    ];
 
       //Por cada linea del array 
       for (var k = 0; k < frecuenciasYMuestras.length; k++){
@@ -552,6 +576,8 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         var muestraOrigen = hojaOrigen.getRange(rangoOrigenMF).getValue().toString();
         var muestraDestino = hojaDestino.getRange(rangoDestinoMF).getValue().toString();
         
+        //Todo esto comentado porque es para hacer comparacion entre frecuencia y numero de muestras de origen y destino... de momento out
+
         // //Valida si el campo frecuencia, o en la siguiente iteracion el campo numero de muestras es lo mismo
         // if(muestraOrigen !== muestraDestino && nombreRangoOrigenMF === nombreRangoDestinoMF && k === 0){
         //   hojaDestino.getRange(rangoDestinoMF).setValue(hojaOrigen.getRange(rangoOrigenMF).getValue());
@@ -568,7 +594,7 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
 
       verificarCeldas(hojaDestino, nombreHojaLogs);
       //Para la columna de solo muestras
-      var textoSoloMuestras = hojaDestino.getRange('F' + (numRango+9)).getValue().toString();
+      var textoSoloMuestras = hojaDestino.getRange('F' + (numRangoFrecMuestrasDest+9)).getValue().toString();
       
       //Pega en el log los valores de los campos que se han ido cambiando en cada iteracion de cada control 
       for (var j = 2; j < datosNombres.length; j++) {
@@ -605,7 +631,7 @@ function main(){
         var nombreHojaLogs = '(' + date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ') - Logs COPIAR IDs Documentados para "' + response2.getResponseText() + '"';      
         createLogSheet(nombreHojaLogs);
         almacenarIDsDocus(response.getResponseText(), response2.getResponseText(), nombreHojaLogs);
-        UI.alert('Se ha terminado la ejecución de copiar los IDs de los Controles correctamente.');
+        UI.alert('Se ha terminado la ejecución de copiar los IDs de los Controles.');
         break;
       case '2':
         var response = UI.prompt("Introduzca el ID de la *CARPETA* que contiene carpetas con los Controles Testeados: ");
@@ -613,7 +639,7 @@ function main(){
         var nombreHojaLogs = '(' + date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ') - Logs COPIAR IDs Controles para "' + response2.getResponseText() + '"';      
         createLogSheet(nombreHojaLogs);
         almacenarIDs(response.getResponseText(), response2.getResponseText(), nombreHojaLogs);
-        UI.alert('Se ha terminado la ejecución de copiar los IDs de los Controles correctamente.');
+        UI.alert('Se ha terminado la ejecución de copiar los IDs de los Controles.');
         break;
       case '3':
         var nombreControlesTesteados = solicitarNombreHoja("Introduzca el NOMBRE de la *HOJA* que contiene los IDs de los Controles Testeados que quieres copiar y actualizar en los Controles Documentados: ");
@@ -627,7 +653,7 @@ function main(){
         var nombreHojaLogs = '(' + date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ') - Logs COMPARAR IDs Controles para "' + response4.getResponseText() + '"';      
         createLogSheet(nombreHojaLogs);
         compararSheets(nombreHojaLogs, nombreControlesTesteados, nombreControlesDocumentados, response3.getResponseText(), response4.getResponseText()); 
-        UI.alert('Ejecución terminada correctamente. \nYa se ha creado la hoja de comparación necesaria para actualizar los Controles Documentados con los Controles de "' + nombreControlesTesteados + '".');
+        UI.alert('Ejecución terminada. \nYa se ha creado la hoja de comparación necesaria para actualizar los Controles Documentados con los Controles de "' + nombreControlesTesteados + '".');
         break;
       case '4': 
         var nombreHojaPrincipal = solicitarNombreHoja("Introduzca el NOMBRE de la *HOJA* principal que contiene todos los controles para dejar un registro de las actualizaciones: ");
@@ -640,7 +666,7 @@ function main(){
         UI.alert('Se procede a ejecutar las actualizaciones.\nESPERE PACIENTEMENTE HASTA EL POP UP INFORMANDO DE QUE EL PROCESO HA TERMINADO.\n\nPuede hacer un seguimiento y una revisión en la hoja de Logs que puede encontrar en: "' + nombreHojaLogs + '"');
         createLogSheet(nombreHojaLogs);
         copiarCeldasDesdeControl(nombreHojaLogs, nombreHojaComparacion, nombreHojaPrincipal);
-        UI.alert('Ejecución terminada correctamente. \nLas actualizaciones de los controles que se encuentran en: "' + nombreHojaComparacion + '" se pueden repasar en la hoja: "' + nombreHojaPrincipal + '". ');
+        UI.alert('Ejecución terminada. \nLas actualizaciones de los controles que se encuentran en: "' + nombreHojaComparacion + '" se pueden repasar en la hoja: "' + nombreHojaPrincipal + '". ');
         break;
       case '5':
         menu = false;
