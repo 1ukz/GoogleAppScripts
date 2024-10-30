@@ -71,21 +71,21 @@ function solicitarNombreHoja(mensaje) {
   return nombreHoja; // Retorna el nombre de la hoja si existe
 }
 
-function preguntaMenu() {
+function preguntaMenu(mensaje) {
 
   const UI = SpreadsheetApp.getUi(); 
   var bool;
   var bucle = false;
   do {
-    var resp = UI.prompt('¿Quieres realizar otra acción? (y/n)');
-    if (resp.getResponseText().toLowerCase() === 'y') {
+    var resp = UI.prompt(mensaje);
+    if (resp.getResponseText().toLowerCase().trim() === 'y') {
       bool = true;
       bucle = true;
-    } else if (resp.getResponseText().toLowerCase() === 'n') {
+    } else if (resp.getResponseText().toLowerCase().trim() === 'n') {
       bool = false;
       bucle = true;
     } else {
-      UI.alert('Respuesta no válida. Por favor, introduzca "y" para realizar otra acción, o "n" para salir del programa.');
+      UI.alert('Respuesta no válida. Por favor, introduzca "y"  o "n".');
     }
   } while (!bucle);
   return bool;
@@ -104,7 +104,7 @@ function almacenarIDs(folderId, sheetName, nombreHojaLogs) {
     const UI = SpreadsheetApp.getUi(); 
 
     var newSheet = MAIN_SHEET.getSheetByName(sheetName);
-    UI.alert('Capturando los IDs de los Controles en: "' + folderId + '" en la Hoja: "' + sheetName + '". \nPOR FAVOR, ESPERE PACIENTEMENTE HASTA EL PROXIMO POP UP QUE INDICANDO QUE EL PROCESO HA TERMINADO. \nSe ha generado una Hoja con los Logs de lo realizado para esta ejecución, disponible en: "' + nombreHojaLogs + '"');
+    UI.alert('Capturando los IDs de los Controles en: "' + folderId + '" en la Hoja: "' + sheetName + '". \n\nPOR FAVOR, ESPERE PACIENTEMENTE HASTA EL PROXIMO POP UP QUE INDICANDO QUE EL PROCESO HA TERMINADO. \n\nSe ha generado una Hoja con los Logs de lo realizado para esta ejecución, disponible en: "' + nombreHojaLogs + '"');
     if (!newSheet) {
       newSheet = MAIN_SHEET.insertSheet(sheetName);
     } else {
@@ -288,16 +288,16 @@ function compararSheets(nombreHojaLogs, sheet1Name, sheet2Name, sheet2Location, 
 
       var crearControlMenu = true;
       do{     
-        var response = UI.prompt('El Control: "' + sheetName1 + '" NO se ha encontrado en los Controles dentro de "' + sheet2Name + '"\n¿Desea crear el Control "' + sheetName1 + '" en la Carpeta de los Controles documentados? (y/n)');
+        var response = preguntaMenu('El Control: "' + sheetName1 + '" NO se ha encontrado en los Controles dentro de "' + sheet2Name + '"\n¿Desea crear el Control "' + sheetName1 + '" en la Carpeta de los Controles documentados? (y/n)');
         
-        if (response.getResponseText().toLowerCase() === 'y') {
+        if (response) {
           try {
             // Copiar el control al folder destino
-            var responseName = UI.prompt('¿Que nombre desea ponerle al control:  ' + sheetName1 + ' en la carpeta destino?').getResponseText();
+            var responseName = UI.prompt('¿Que nombre desea ponerle al control:  ' + sheetName1 + ' en la carpeta destino?');
             
             var sourceFile = DriveApp.getFileById(id1);
             var folderDestino = DriveApp.getFolderById(sheet2Location);
-            var copiedFile = sourceFile.makeCopy(responseName, folderDestino);
+            var copiedFile = sourceFile.makeCopy(responseName.getResponseText().trim(), folderDestino);
   
             // Obtener nuevo ID y añadirlo al sheet
             var newId = copiedFile.getId();
@@ -312,19 +312,17 @@ function compararSheets(nombreHojaLogs, sheet1Name, sheet2Name, sheet2Location, 
             newSheet.getRange(row, 4).setValue(firstSheetName);
             newSheet.getRange(row, 5).setValue(newName); // Guardar el nombre de la hoja original (en este caso, la que se ha copiado y se ha escogido como nombre en la hoja destino)
             row++;
-            limpiarControlCreado(spreadsheet.getSheets()[0], [
-            'B13:F13', 'B9:F9', 'B7:F7', 'A5', 'B5', 'C5', 'D5', 'E5', 'F5', 'F15'
-            ]);            
+            //limpiarControlCreado(spreadsheet.getSheets()[0], [
+            //'B13:F13', 'B9:F9', 'B7:F7', 'A5', 'B5', 'C5', 'D5', 'E5', 'F5'
+            //]);            
             logToSheet(nombreHojaLogs, 'Control creado: "' + newName + '" con ID: "' + newId + '"');
             crearControlMenu = false;
           } catch (error) {
             UI.alert('Error al copiar el control: "' + error.message + '"');
           }
-        }else if (response.getResponseText().toLowerCase() === 'n'){
+        }else{
           logToSheet(nombreHojaLogs, 'Control no creado: "' + sheet1Name + '"');
           crearControlMenu = false;
-        }else{
-          UI.alert('Respuesta no válida. Por favor, introduzca "y" para crear una copia del Control en los Documentados, o "n" para no crearlo.');
         }
       }while(crearControlMenu);
     }
@@ -338,7 +336,7 @@ function verificarCeldas(hojaDestino, nombreHojaLogs) {
   ];
 
   var celdasNoVacias = [
-    'B6:F6', 'B8:F8', 'B12:F12'
+    'B6:F6', 'B8:F8', 'B12:F12', 'E14', 'F14'
   ];
 
   // Verificar celdas que deben estar vacías
@@ -465,6 +463,7 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         {nombreOrigen: 'C' + (numRango-1), origen: 'C' + numRango, nombreDestino: 'C' + (numRango-3), destino: 'C' + (numRango-2)},
         {nombreOrigen: 'D' + (numRango-1), origen: 'D' + numRango, nombreDestino: 'D' + (numRango-3), destino: 'D' + (numRango-2)},
         {nombreOrigen: 'E' + (numRango-1), origen: 'E' + numRango, nombreDestino: 'E' + (numRango-3), destino: 'E' + (numRango-2)},
+        {nombreOrigen: 'F' + (numRango-1), origen: 'F' + numRango, nombreDestino: 'F' + (numRango-3), destino: 'F' + (numRango-2)},
         {nombreOrigen: 'A' + (numRango+2), origen: 'B' + (numRango+2) + ':' + 'F' + (numRango+2), nombreDestino: 'A' + (numRango+1), destino: 'B' + (numRango+1) + ':' + 'F' + (numRango+1)},
         {nombreOrigen: 'A' + (numRango+4), origen: 'B' + (numRango+4) + ':' + 'F' + (numRango+4), nombreDestino: 'A' + (numRango+3), destino: 'B' + (numRango+3) + ':' + 'F' + (numRango+3)}
       ];
@@ -490,6 +489,7 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
       }
       
       //Logica para el campo de Pruebas, ya que suele ser diferente y no es tan uniforme como el resto de campos ya validados (suele a veces haber filas extras entre la Evidencia y las Pruebas)
+     
       var valorA12 = hojaOrigen.getRange('A12').getValue();
       var numRangoMuestras = 0;
 
@@ -624,13 +624,13 @@ function main(){
 
   do {
     var option = UI.prompt('Introduce el número de la opción que quieres ejecutar:\n (1) -> Copiar IDs de Carpeta Controles Documentados. \nRecuerda: Los ficheros de Controles deben de estar todos en una sola carpeta.\n (2) -> Copiar IDs de Controles Testeados. \nRecuerda: Los ficheros de Controles deben de encontrarse en carpetas separadas, las cuales se encuentran en una sola carpeta.\n (3) -> Comparar Controles.\n (4) -> Actualizar Controles Documentados.\n (5) -> Salir.');
-    switch (option.getResponseText()) {
+    switch (option.getResponseText().trim()) {
       case '1':
         var response = UI.prompt("Introduzca el ID de la *CARPETA* que contiene los Controles Documentados:"); 
         var response2 = UI.prompt("Introduzca el NOMBRE para la *HOJA* que se va a crear conteniendo los IDs de los Controles: ");
         var nombreHojaLogs = '(' + date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ') - Logs COPIAR IDs Documentados para "' + response2.getResponseText() + '"';      
         createLogSheet(nombreHojaLogs);
-        almacenarIDsDocus(response.getResponseText(), response2.getResponseText(), nombreHojaLogs);
+        almacenarIDsDocus(response.getResponseText().trim(), response2.getResponseText().trim(), nombreHojaLogs);
         UI.alert('Se ha terminado la ejecución de copiar los IDs de los Controles.');
         break;
       case '2':
@@ -638,7 +638,7 @@ function main(){
         var response2 = UI.prompt("Introduzca el NOMBRE para la *HOJA* que se va a crear conteniendo los IDs de los controles: ");
         var nombreHojaLogs = '(' + date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ') - Logs COPIAR IDs Controles para "' + response2.getResponseText() + '"';      
         createLogSheet(nombreHojaLogs);
-        almacenarIDs(response.getResponseText(), response2.getResponseText(), nombreHojaLogs);
+        almacenarIDs(response.getResponseText().trim(), response2.getResponseText().trim(), nombreHojaLogs);
         UI.alert('Se ha terminado la ejecución de copiar los IDs de los Controles.');
         break;
       case '3':
@@ -652,7 +652,7 @@ function main(){
         var response4 = UI.prompt('Introduzca el NOMBRE para la *HOJA* que se va a crear para representar la comparación de los Controles en ' + nombreControlesTesteados + ' y ' + nombreControlesDocumentados);
         var nombreHojaLogs = '(' + date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ') - Logs COMPARAR IDs Controles para "' + response4.getResponseText() + '"';      
         createLogSheet(nombreHojaLogs);
-        compararSheets(nombreHojaLogs, nombreControlesTesteados, nombreControlesDocumentados, response3.getResponseText(), response4.getResponseText()); 
+        compararSheets(nombreHojaLogs, nombreControlesTesteados, nombreControlesDocumentados, response3.getResponseText().trim(), response4.getResponseText().trim()); 
         UI.alert('Ejecución terminada. \nYa se ha creado la hoja de comparación necesaria para actualizar los Controles Documentados con los Controles de "' + nombreControlesTesteados + '".');
         break;
       case '4': 
@@ -663,10 +663,10 @@ function main(){
         if (nombreHojaComparacion === null) break; // Si el usuario cierra el diálogo, salir
 
         var nombreHojaLogs = '(' + date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ') - Logs ACTUALIZACIONES Controles para "' + nombreHojaPrincipal + '"';      
-        UI.alert('Se procede a ejecutar las actualizaciones.\nESPERE PACIENTEMENTE HASTA EL POP UP INFORMANDO DE QUE EL PROCESO HA TERMINADO.\n\nPuede hacer un seguimiento y una revisión en la hoja de Logs que puede encontrar en: "' + nombreHojaLogs + '"');
+        UI.alert('Se procede a ejecutar las actualizaciones.\n\nESPERE PACIENTEMENTE HASTA EL POP UP INFORMANDO DE QUE EL PROCESO HA TERMINADO.\n\nPuede hacer un seguimiento y una revisión en la hoja de Logs que puede encontrar en: "' + nombreHojaLogs + '"');
         createLogSheet(nombreHojaLogs);
         copiarCeldasDesdeControl(nombreHojaLogs, nombreHojaComparacion, nombreHojaPrincipal);
-        UI.alert('Ejecución terminada. \nLas actualizaciones de los controles que se encuentran en: "' + nombreHojaComparacion + '" se pueden repasar en la hoja: "' + nombreHojaPrincipal + '". ');
+        UI.alert('Ejecución terminada. \n\nLas actualizaciones de los controles que se encuentran en: "' + nombreHojaComparacion + '" se pueden repasar en la hoja: "' + nombreHojaPrincipal + '". ');
         break;
       case '5':
         menu = false;
@@ -674,7 +674,7 @@ function main(){
       default:
         UI.alert('Opción no válida: "' + option.getResponseText() + '". Por favor, introduce un número de opción válido.');
     }
-    menu = preguntaMenu();
+    menu = preguntaMenu('¿Quieres realizar otra acción? (y/n)');
   } while (menu);
 
   UI.alert('EL PROGRAMA HA TERMINADO. Gracias por utilizar UPDATE-CONTROLS! :)');
