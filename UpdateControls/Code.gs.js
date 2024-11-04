@@ -1,15 +1,5 @@
 // CREATOR: LUCAS SAETA (@1ukz) - lucassaeta9@gmail.com
 
-//TODOOOOO 
-// separar en funciones separadas la funcion de actualizar controles (copiarCeldasDesdeControl) ya que es un lio y se puede refactorizar mucho. Tambien, simplemente retocar 
-// celdas que esten mal, en vez de hacer un monton de ifs. 
-
-
-// GLOBAL VARIABLES
-// const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
-// const MAIN_SHEET = SpreadsheetApp.openById(ID);
-// const UI = SpreadsheetApp.getUi(); 
-
 function onOpen() {
   const UI = SpreadsheetApp.getUi(); 
 
@@ -92,10 +82,37 @@ function preguntaMenu(mensaje) {
 
 }
 
-function limpiarControlCreado(sheet, celdasAComprobar) {
-  celdasAComprobar.forEach(function(rango) {
-    sheet.getRange(rango).clearContent();
-  });
+function checkFormat(hoja, nombreHojaLogs, message){
+  if(!(hoja.getRange('A1:F1').getValue().includes('DOCUMENTACIÓN DEL CONTROL') && hoja.getRange('A2').getValue().includes('Tipo de Control') && hoja.getRange('A6').getValue().includes('Descripción') && hoja.getRange('A8').getValue().includes('Evidencia') && hoja.getRange('A11:F11').getValue().includes('DESCRIPCIÓN DE LA PRUEBA A EJECUTAR') && hoja.getRange('A12').getValue().includes('Prueba a realizar') && hoja.getRange('E14').getValue().includes('Tamaño Muestra'))){
+    
+    updateFormat(hoja);
+    logToSheet(nombreHojaLogs, 'AVISO: Se ha actualizado el formato de la ' + message + ': "' + hoja.getName() + '" ya que no seguía el formato estándar.')
+  }
+}
+
+function updateFormat(hoja){
+  const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+  const MAIN_SHEET = SpreadsheetApp.openById(ID);
+  const UI = SpreadsheetApp.getUi();
+  
+  //comparacion fila extra arriba
+
+  if(hoja.getRange('A3').getValue() === 'Tipo de Control' || hoja.getRange('A3').getValue() === 'Clase'){
+
+    if(hoja.getRange('A3').getValue() === 'Clase'){
+      hoja.getRange('A3').setValue('Tipo de Control');
+    }
+    if(hoja.getRange('A2:F2').getValue().includes('DOCUMENTACIÓN DEL CONTROL')){
+      hoja.deleteRow('1');
+    }
+  }
+  if(hoja.getRange('A10:F10').getValue().includes('DESCRIPCIÓN DE LA PRUEBA A EJECUTAR') && hoja.getRange('A9').getValue().includes('Evidencia. Actualizaciones')){
+
+    hoja.insertRowBefore(10);
+    hoja.getRange('A10:F10').setBackground(null);  // restablece el fondo de la nueva fila en blanco
+    hoja.getRange('A10:F10').mergeAcross();  // fusionar las celdas en la nueva fila
+  }
+
 }
 
 function almacenarIDs(folderId, sheetName, nombreHojaLogs) {
@@ -311,10 +328,7 @@ function compararSheets(nombreHojaLogs, sheet1Name, sheet2Name, sheet2Location, 
             newSheet.getRange(row, 3).setValue(newId);
             newSheet.getRange(row, 4).setValue(firstSheetName);
             newSheet.getRange(row, 5).setValue(newName); // Guardar el nombre de la hoja original (en este caso, la que se ha copiado y se ha escogido como nombre en la hoja destino)
-            row++;
-            //limpiarControlCreado(spreadsheet.getSheets()[0], [
-            //'B13:F13', 'B9:F9', 'B7:F7', 'A5', 'B5', 'C5', 'D5', 'E5', 'F5'
-            //]);            
+            row++;           
             logToSheet(nombreHojaLogs, 'Control creado: "' + newName + '" con ID: "' + newId + '"');
             crearControlMenu = false;
           } catch (error) {
@@ -392,7 +406,7 @@ function verificarCeldas(hojaDestino, nombreHojaLogs) {
   // Verificar si la hoja tiene más de 14 filas, lo que indicaría que F15 existe
   var totalFilas = hojaDestino.getMaxRows();
   if (totalFilas > 14 && hojaDestino.getRange('E14').getValue() === 'Tamaño Muestra.') {
-    logToSheet(nombreHojaLogs, 'ADVERTENCIA: Existe una fila adicional (15) que no debería estar presente.');
+    logToSheet(nombreHojaLogs, 'ADVERTENCIA: Existe una filas adicionales que no deberían de estar presente.');
   }
 }
   
@@ -427,7 +441,7 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         var archivoOrigen = SpreadsheetApp.openById(idOrigen);
         var hojaOrigen = archivoOrigen.getSheetByName(hojaOrigenNombre);
         if (!hojaOrigen) {
-          UI.alert('No se encontró la Hoja de origen con el nombre especificado: "' + hojaOrigen + '"');
+          UI.alert('No se encontró la Hoja de origen con el nombre especificado: "' + hojaOrigenNombre + '"');
         }
       } catch (e) {
         logToSheet(nombreHojaLogs, 'Error al abrir el archivo de origen con ID: "' + idOrigen + '" de la hoja origen: "' + hojaOrigenNombre);
@@ -439,33 +453,28 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         var archivoDestino = SpreadsheetApp.openById(idDestino);
         var hojaDestino = archivoDestino.getSheetByName(hojaDestinoNombre);
         if (!hojaDestino) {
-          UI.alert('No se encontró la Hoja de destino con el nombre especificado: ' + hojaDestino);
+          UI.alert('No se encontró la Hoja de destino con el nombre especificado: ' + hojaDestinoNombre);
         }
       } catch (e) {
         logToSheet(nombreHojaLogs, 'Error al abrir el archivo de destino con ID: "' + idDestino + '" de la hoja destino: "' + hojaDestinoNombre);
         continue;
       }
 
-      //Segun cuantas filas tenga el documento (si tiene una arriba extra, por ejemplo) la celda de los datos a copiar se encontraran en un lugar u otro
-      var numRango = 0;
-      if(hojaOrigen.getRange('A2').getValue() === 'Tipo de Control' || hojaOrigen.getRange('A2').getValue() === 'Clase'){      
-        numRango = 5;
-      } else if (hojaOrigen.getRange('A3').getValue() === 'Tipo de Control' || hojaOrigen.getRange('A3').getValue() === 'Clase') {
-        numRango = 6;
-      } else {
-        logToSheet(nombreHojaLogs, 'ERROR. Fichero con rango de celdas incorrecto o nombres diferentes. REVISAR: ' + hojaDestinoNombre);
-        continue; 
-      }
+      //Verificar que los ficheros siguen el formato estandar y sino retocarlos
+      checkFormat(hojaOrigen, nombreHojaLogs, 'hoja origen'); 
+      checkFormat(hojaDestino, nombreHojaLogs, 'hoja destino');
+    
 
       var celdas = [
-        {nombreOrigen: 'A' + (numRango-1), origen: 'A' + numRango, nombreDestino: 'A' + (numRango-3), destino: 'A' + (numRango-2)},
-        {nombreOrigen: 'B' + (numRango-1), origen: 'B' + numRango, nombreDestino: 'B' + (numRango-3), destino: 'B' + (numRango-2)},
-        {nombreOrigen: 'C' + (numRango-1), origen: 'C' + numRango, nombreDestino: 'C' + (numRango-3), destino: 'C' + (numRango-2)},
-        {nombreOrigen: 'D' + (numRango-1), origen: 'D' + numRango, nombreDestino: 'D' + (numRango-3), destino: 'D' + (numRango-2)},
-        {nombreOrigen: 'E' + (numRango-1), origen: 'E' + numRango, nombreDestino: 'E' + (numRango-3), destino: 'E' + (numRango-2)},
-        {nombreOrigen: 'F' + (numRango-1), origen: 'F' + numRango, nombreDestino: 'F' + (numRango-3), destino: 'F' + (numRango-2)},
-        {nombreOrigen: 'A' + (numRango+2), origen: 'B' + (numRango+2) + ':' + 'F' + (numRango+2), nombreDestino: 'A' + (numRango+1), destino: 'B' + (numRango+1) + ':' + 'F' + (numRango+1)},
-        {nombreOrigen: 'A' + (numRango+4), origen: 'B' + (numRango+4) + ':' + 'F' + (numRango+4), nombreDestino: 'A' + (numRango+3), destino: 'B' + (numRango+3) + ':' + 'F' + (numRango+3)}
+        {nombreOrigen: 'A4', origen: 'A5', nombreDestino: 'A2', destino: 'A3'},
+        {nombreOrigen: 'B4', origen: 'B5', nombreDestino: 'B2', destino: 'B3'},
+        {nombreOrigen: 'C4', origen: 'C5', nombreDestino: 'C2', destino: 'C3'},
+        {nombreOrigen: 'D4', origen: 'D5', nombreDestino: 'D2', destino: 'D3'},
+        {nombreOrigen: 'E4', origen: 'E5', nombreDestino: 'E2', destino: 'E3'},
+        {nombreOrigen: 'F4', origen: 'F5', nombreDestino: 'F2', destino: 'F3'},
+        {nombreOrigen: 'A7', origen: 'B7:F7', nombreDestino: 'A6', destino: 'B6:F6'},
+        {nombreOrigen: 'A9', origen: 'B9:F9', nombreDestino: 'A8', destino: 'B8:F8'},
+        {nombreOrigen: 'A13', origen: 'B13:F13', nombreDestino: 'A12', destino: 'B12:F12'}
       ];
 
       var textoCopiado = [];  // Para almacenar los campos copiados y pegarlos al excel con los logs
@@ -476,10 +485,9 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         var rangoOrigen = celdas[j].origen;
         var rangoDestino = celdas[j].destino;
         var valores = hojaOrigen.getRange(rangoOrigen).getValues();
-
         //Verifica si existen valores en el campo origen en los campos de actualizaciones
         var hayValores = valores.some(fila => fila.some(valor => valor.trim() !== ''));
-
+          
         //Si existe algo (es decir, ha habido un cambio y se ha rellenado la celda correspondiente) 
         if (hayValores) {
           hojaDestino.getRange(rangoDestino).setValues(valores);
@@ -487,115 +495,14 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
           logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "' + hojaOrigen.getRange(celdas[j].nombreOrigen).getValue().toString() + '" de la hoja origen al campo: "' + hojaDestino.getRange(celdas[j].nombreDestino).getValue().toString() + '" de la hoja destino');
         }
       }
-      
-      //Logica para el campo de Pruebas, ya que suele ser diferente y no es tan uniforme como el resto de campos ya validados (suele a veces haber filas extras entre la Evidencia y las Pruebas)
-     
-      var valorA12 = hojaOrigen.getRange('A12').getValue();
-      var numRangoMuestras = 0;
 
-      //Si en el campo A12 esta el texto a continuacion
-      if (valorA12 === 'Prueba a realizar') {
-      // Se almacenan los de la fila siguiente en el rango correspondiente
-      var valoresB13F13 = hojaOrigen.getRange('B13:F13').getValues();
-      var hayValoresB13F13 = valoresB13F13.some(fila => fila.some(valor => valor.trim() !== '' && valor !== null));
-
-      if (hayValoresB13F13 && hojaDestino.getRange('A12').getValue() === 'Prueba a realizar') {
-          hojaDestino.getRange('B12:F12').setValues(valoresB13F13);
-          textoCopiado.push('Prueba. Actualizaciones');
-          logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "Prueba. Actualizaciones" de la hoja origen al campo "' + hojaDestino.getRange('A12').getValue().toString() + '" de la hoja destino');
-      } else if (hayValoresB13F13 && hojaDestino.getRange('A11').getValue() === 'Prueba a realizar') {
-          hojaDestino.insertRowBefore(10);  // Esto agrega una fila en blanco en la fila 10
-          hojaDestino.getRange('A10:F10').setBackground(null);  // Opcional: restablece el fondo de la nueva fila en blanco
-          hojaDestino.getRange('A10:F10').mergeAcross();  // Opcional: fusionar las celdas en la nueva fila
-          hojaDestino.getRange('B12:F12').setValues(valoresB12F12);
-          logToSheet(nombreHojaLogs, 'El Control "' + controlActual + '"  no tenía el formato correcto. Se ha añadido la fila 10 para que siga el formato correcto.');
-          logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "Prueba. Actualizaciones" de la hoja origen al campo "' + hojaDestino.getRange('A12').getValue().toString() + '" de la hoja destino');
+      //para comparar muestra tamanio
+      if(hojaOrigen.getRange('F14').getValue() !== hojaDestino.getRange('F14').getValue()){
+        hojaDestino.getRange('F14').setValue(hojaOrigen.getRange('F14').getValue());
+        textoCopiado.push(hojaOrigen.getRange(hojaOrigen.getRange('E14')).getValue().toString());
+        logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "' + hojaOrigen.getRange('E14').getValue().toString() + '" de la hoja origen al campo: "' + hojaDestino.getRange('E14').getValue().toString() + '" de la hoja destino');
       }
-
-    } else if (valorA12 === 'Prueba. Actualizaciones') { //TODO añadir verificación en lado destino para que pegue correcto
-
-        numRangoMuestras++; // Se incrementa el contador para almacenar el campo correspondiente al número de muestras
-        var valoresB12F12 = hojaOrigen.getRange('B12:F12').getValues();
-        var hayValoresB12F12 = valoresB12F12.some(fila => fila.some(valor => valor.trim() !== '' && valor !== null));
-
-        if (hayValoresB12F12 && hojaDestino.getRange('A12').getValue() === 'Prueba a realizar') {
-            hojaDestino.getRange('B12:F12').setValues(valoresB12F12);
-            textoCopiado.push('Prueba. Actualizaciones');
-            logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "Prueba. Actualizaciones" de la hoja origen al campo "' + hojaDestino.getRange('A12').getValue().toString() + '" de la hoja destino');
-        } else if (hayValoresB12F12 && hojaDestino.getRange('A11').getValue() === 'Prueba a realizar') {
-          hojaDestino.insertRowBefore(10);  // Esto agrega una fila en blanco en la fila 10
-          hojaDestino.getRange('A10:F10').setBackground(null);  // Opcional: restablece el fondo de la nueva fila en blanco
-          hojaDestino.getRange('A10:F10').mergeAcross();  // Opcional: fusionar las celdas en la nueva fila
-            hojaDestino.getRange('B12:F12').setValues(valoresB12F12);
-            logToSheet(nombreHojaLogs, 'El Control "' + controlActual + '"  no tenía el formato correcto. Se ha aniadido la fila 10 para que siga el formato correcto.');
-            logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "Prueba. Actualizaciones" de la hoja origen al campo "' + hojaDestino.getRange('A12').getValue().toString() + '" de la hoja destino');
-        }
-    } else{
-
-        logToSheet(nombreHojaLogs, 'REVISAR Control Testeado "' + controlActual + '" ya que tiene la "PRUEBA A REALIZAR" en la fila incorrecta');
-    }
-
-    var numRangoFrecMuestras = 0;
-    var numRangoFrecMuestrasDest = 0;
-
-    // Agrupamos las condiciones con paréntesis para evitar problemas de precedencia
-    if ((hojaOrigen.getRange('A2').getValue() === 'Tipo de Control' || hojaOrigen.getRange('A2').getValue() === 'Clase') && 
-        (hojaDestino.getRange('A2').getValue() === 'Tipo de Control' || hojaDestino.getRange('A2').getValue() === 'Clase')) {      
-      numRangoFrecMuestras = 5;
-      numRangoFrecMuestrasDest = 5;
-    } else if ((hojaOrigen.getRange('A3').getValue() === 'Tipo de Control' || hojaOrigen.getRange('A3').getValue() === 'Clase') && 
-              (hojaDestino.getRange('A3').getValue() === 'Tipo de Control' || hojaDestino.getRange('A3').getValue() === 'Clase')) {
-      numRangoFrecMuestras = 6;
-      numRangoFrecMuestrasDest = 6;
-    } else if ((hojaOrigen.getRange('A3').getValue() === 'Tipo de Control' || hojaOrigen.getRange('A3').getValue() === 'Clase') && 
-              (hojaDestino.getRange('A2').getValue() === 'Tipo de Control' || hojaDestino.getRange('A2').getValue() === 'Clase')) {        
-      numRangoFrecMuestras = 6;
-      numRangoFrecMuestrasDest = 5;
-    } else if ((hojaOrigen.getRange('A2').getValue() === 'Tipo de Control' || hojaOrigen.getRange('A2').getValue() === 'Clase') && 
-              (hojaDestino.getRange('A3').getValue() === 'Tipo de Control' || hojaDestino.getRange('A3').getValue() === 'Clase')) {        
-      numRangoFrecMuestras = 5;
-      numRangoFrecMuestrasDest = 6;
-    } else {  
-      logToSheet(nombreHojaLogs, 'ERROR. Fichero con rango de celdas incorrecto o nombres diferentes. REVISAR: ' + hojaDestinoNombre);
-      continue; 
-    }
-
-    // Array para el campo de frecuencias y muestras normales
-    var frecuenciasYMuestras = [
-      {nombreOrigen: 'D' + (numRangoFrecMuestras - 3), origen: 'D' + (numRangoFrecMuestras - 2), nombreDestino: 'D' + (numRangoFrecMuestrasDest - 3), destino: 'D' + (numRangoFrecMuestrasDest - 2)}, 
-      {nombreOrigen: 'E' + (numRangoFrecMuestras + 9), origen: 'F' + (numRangoFrecMuestras + 9), nombreDestino: 'E' + (numRangoFrecMuestrasDest + 9), destino: 'F' + (numRangoFrecMuestrasDest + 9)}
-    ];
-
-      //Por cada linea del array 
-      for (var k = 0; k < frecuenciasYMuestras.length; k++){
-        var rangoOrigenMF = frecuenciasYMuestras[k].origen;
-        var rangoDestinoMF = frecuenciasYMuestras[k].destino;
-        var nombreRangoOrigenMF = frecuenciasYMuestras[k].nombreOrigen;
-        var nombreRangoDestinoMF = frecuenciasYMuestras[k].nombreDestino;
-
-        var muestraOrigen = hojaOrigen.getRange(rangoOrigenMF).getValue().toString();
-        var muestraDestino = hojaDestino.getRange(rangoDestinoMF).getValue().toString();
         
-        //Todo esto comentado porque es para hacer comparacion entre frecuencia y numero de muestras de origen y destino... de momento out
-
-        // //Valida si el campo frecuencia, o en la siguiente iteracion el campo numero de muestras es lo mismo
-        // if(muestraOrigen !== muestraDestino && nombreRangoOrigenMF === nombreRangoDestinoMF && k === 0){
-        //   hojaDestino.getRange(rangoDestinoMF).setValue(hojaOrigen.getRange(rangoOrigenMF).getValue());
-        //   textoCopiado.push(hojaOrigen.getRange(frecuenciasYMuestras[k].nombreOrigen).getValue().toString());
-        //   logToSheet(nombreHojaLogs, 'Se ha copiado el campo MUESTRA o FRECUENCIA: "' + hojaOrigen.getRange(frecuenciasYMuestras[k].nombreOrigen).getValue().toString() + '" de la hoja origen al campo "' + hojaDestino.getRange(frecuenciasYMuestras[k].nombreDestino).getValue().toString() + '" de la hoja destino.');
-        // }else if(muestraOrigen !== muestraDestino && nombreRangoOrigenMF !== nombreRangoDestinoMF){
-        //   logToSheet(nombreHojaLogs, 'Revisar porque las muestras o la frecuencia no coinciden, pero el formato no es uniforme entre el control: ' + hojaOrigenNombre + ' y: ' + hojaDestinoNombre);
-        // }
-
-        //Almacena los valores finales frecuencias y muestras del control documentado oficial 
-        textoFrecuentasYMuestras.push(hojaDestino.getRange(rangoDestinoMF).getValue().toString());
-
-      }
-
-      verificarCeldas(hojaDestino, nombreHojaLogs);
-      //Para la columna de solo muestras
-      var textoSoloMuestras = hojaDestino.getRange('F' + (numRangoFrecMuestrasDest+9)).getValue().toString();
-      
       //Pega en el log los valores de los campos que se han ido cambiando en cada iteracion de cada control 
       for (var j = 2; j < datosNombres.length; j++) {
         if(datosNombres[j][0].trim().toLowerCase() === controlActual.trim().toLowerCase()) {
