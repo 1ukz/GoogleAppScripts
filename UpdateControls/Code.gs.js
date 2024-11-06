@@ -99,9 +99,6 @@ function updateFormat(hoja){
 
   if(hoja.getRange('A3').getValue() === 'Tipo de Control' || hoja.getRange('A3').getValue() === 'Clase'){
 
-    if(hoja.getRange('A3').getValue() === 'Clase'){
-      hoja.getRange('A3').setValue('Tipo de Control');
-    }
     if(hoja.getRange('A2:F2').getValue().includes('DOCUMENTACIÓN DEL CONTROL')){
       hoja.deleteRow('1');
     }
@@ -115,13 +112,80 @@ function updateFormat(hoja){
 
 }
 
+function verificarCeldas(hojaDestino, nombreHojaLogs) {
+
+  var celdasAComprobar = [
+    'B13:F13', 'B9:F9', 'B7:F7', 'A5', 'B5', 'C5', 'D5', 'E5', 'F5'
+  ];
+
+  var celdasNoVacias = [
+    'B6:F6', 'B8:F8', 'B12:F12', 'E14', 'F14'
+  ];
+
+  // Verificar celdas que deben estar vacías
+  for (var i = 0; i < celdasAComprobar.length; i++) {
+    var rango = hojaDestino.getRange(celdasAComprobar[i]);
+    var valores = rango.getValues();
+    var hayValores = false;
+
+    // Iterar por las celdas para verificar si alguna contiene datos
+    for (var k = 0; k < valores.length; k++) {
+      for (var l = 0; l < valores[k].length; l++) {
+        if (valores[k][l].toString().trim() !== '') { // Si la celda no está vacía
+          hayValores = true;
+          break; // Salir del bucle interno
+        }
+      }
+      if (hayValores) {
+        break; // Salir del bucle externo
+      }
+    }
+
+    // Si hay valores en las celdas que deberían estar vacías
+    if (hayValores && hojaDestino.getRange('A12').getValue() === 'Prueba a realizar') {
+      logToSheet(nombreHojaLogs,'ADVERTENCIA: El campo "' + celdasAComprobar[i] + '" NO está vacío cuando debería estarlo.');
+    }
+  }
+
+  // Verificar celdas que NO deben estar vacías
+  for (var j = 0; j < celdasNoVacias.length; j++) {
+    var rangoNoVacio = hojaDestino.getRange(celdasNoVacias[j]);
+    var valoresNoVacios = rangoNoVacio.getValues();
+    var hayValoresNoVacios = false;
+
+    // Iterar por las celdas para verificar si están vacías
+    for (var m = 0; m < valoresNoVacios.length; m++) {
+      for (var n = 0; n < valoresNoVacios[m].length; n++) {
+        if (valoresNoVacios[m][n].toString().trim() !== '') { // Si la celda no está vacía
+          hayValoresNoVacios = true;
+          break; // Salir del bucle interno
+        }
+      }
+      if (hayValoresNoVacios) {
+        break; // Salir del bucle externo
+      }
+    }
+
+    // Si NO hay valores en las celdas que deberían tener datos
+    if (!hayValoresNoVacios && hojaDestino.getRange('A12').getValue() === 'Prueba a realizar') {
+      logToSheet(nombreHojaLogs,'ADVERTENCIA: El campo "' + celdasNoVacias[j] + '" está vacío, pero debería tener datos.');
+    }
+  }
+
+  // Verificar si la hoja tiene más de 14 filas, lo que indicaría que F15 existe
+  var totalFilas = hojaDestino.getMaxRows();
+  if (totalFilas > 14 && hojaDestino.getRange('E14').getValue() === 'Tamaño Muestra.') {
+    logToSheet(nombreHojaLogs, 'ADVERTENCIA: Existe una filas adicionales que no deberían de estar presente.');
+  }
+}
+
 function almacenarIDs(folderId, sheetName, nombreHojaLogs) {
     const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
     const MAIN_SHEET = SpreadsheetApp.openById(ID);
     const UI = SpreadsheetApp.getUi(); 
 
     var newSheet = MAIN_SHEET.getSheetByName(sheetName);
-    UI.alert('Capturando los IDs de los Controles en: "' + folderId + '" en la Hoja: "' + sheetName + '". \n\nPOR FAVOR, ESPERE PACIENTEMENTE HASTA EL PROXIMO POP UP QUE INDICANDO QUE EL PROCESO HA TERMINADO. \n\nSe ha generado una Hoja con los Logs de lo realizado para esta ejecución, disponible en: "' + nombreHojaLogs + '"');
+    UI.alert('Capturando los IDs de los Controles en: "' + folderId + '" en la Hoja: "' + sheetName + '". \n\nPOR FAVOR, ESPERE PACIENTEMENTE HASTA EL PRÓXIMO POP-UP QUE INDICANDO QUE EL PROCESO HA TERMINADO. \n\nSe ha generado una Hoja con los Logs de lo realizado para esta ejecución, disponible en: "' + nombreHojaLogs + '"');
     if (!newSheet) {
       newSheet = MAIN_SHEET.insertSheet(sheetName);
     } else {
@@ -192,7 +256,7 @@ function almacenarIDs(folderId, sheetName, nombreHojaLogs) {
     const MAIN_SHEET = SpreadsheetApp.openById(ID);
     const UI = SpreadsheetApp.getUi(); 
 
-    UI.alert('Capturando los IDs de los Controles en: "' + folderId + '" en la Hoja: "' + sheetName + '". \n\nPOR FAVOR, ESPERE PACIENTEMENTE HASTA EL PROXIMO POP UP INDICANDO QUE EL PROCESO HA TERMINADO. \n\nSe ha generado una Hoja con los Logs de lo realizado para esta ejecución, disponible en: "' + nombreHojaLogs + '"');
+    UI.alert('Capturando los IDs de los Controles en: "' + folderId + '" en la Hoja: "' + sheetName + '". \n\nPOR FAVOR, ESPERE PACIENTEMENTE HASTA EL PRÓXIMO POP-UP INDICANDO QUE EL PROCESO HA TERMINADO. \n\nSe ha generado una Hoja con los Logs de lo realizado para esta ejecución, disponible en: "' + nombreHojaLogs + '"');
     var newSheet = MAIN_SHEET.getSheetByName(sheetName);
     
     if (!newSheet) {
@@ -343,73 +407,6 @@ function compararSheets(nombreHojaLogs, sheet1Name, sheet2Name, sheet2Location, 
   }
 }
   
-function verificarCeldas(hojaDestino, nombreHojaLogs) {
-
-  var celdasAComprobar = [
-    'B13:F13', 'B9:F9', 'B7:F7', 'A5', 'B5', 'C5', 'D5', 'E5', 'F5'
-  ];
-
-  var celdasNoVacias = [
-    'B6:F6', 'B8:F8', 'B12:F12', 'E14', 'F14'
-  ];
-
-  // Verificar celdas que deben estar vacías
-  for (var i = 0; i < celdasAComprobar.length; i++) {
-    var rango = hojaDestino.getRange(celdasAComprobar[i]);
-    var valores = rango.getValues();
-    var hayValores = false;
-
-    // Iterar por las celdas para verificar si alguna contiene datos
-    for (var k = 0; k < valores.length; k++) {
-      for (var l = 0; l < valores[k].length; l++) {
-        if (valores[k][l].toString().trim() !== '') { // Si la celda no está vacía
-          hayValores = true;
-          break; // Salir del bucle interno
-        }
-      }
-      if (hayValores) {
-        break; // Salir del bucle externo
-      }
-    }
-
-    // Si hay valores en las celdas que deberían estar vacías
-    if (hayValores && hojaDestino.getRange('A12').getValue() === 'Prueba a realizar') {
-      logToSheet(nombreHojaLogs,'ADVERTENCIA: El campo "' + celdasAComprobar[i] + '" NO está vacío cuando debería estarlo.');
-    }
-  }
-
-  // Verificar celdas que NO deben estar vacías
-  for (var j = 0; j < celdasNoVacias.length; j++) {
-    var rangoNoVacio = hojaDestino.getRange(celdasNoVacias[j]);
-    var valoresNoVacios = rangoNoVacio.getValues();
-    var hayValoresNoVacios = false;
-
-    // Iterar por las celdas para verificar si están vacías
-    for (var m = 0; m < valoresNoVacios.length; m++) {
-      for (var n = 0; n < valoresNoVacios[m].length; n++) {
-        if (valoresNoVacios[m][n].toString().trim() !== '') { // Si la celda no está vacía
-          hayValoresNoVacios = true;
-          break; // Salir del bucle interno
-        }
-      }
-      if (hayValoresNoVacios) {
-        break; // Salir del bucle externo
-      }
-    }
-
-    // Si NO hay valores en las celdas que deberían tener datos
-    if (!hayValoresNoVacios && hojaDestino.getRange('A12').getValue() === 'Prueba a realizar') {
-      logToSheet(nombreHojaLogs,'ADVERTENCIA: El campo "' + celdasNoVacias[j] + '" está vacío, pero debería tener datos.');
-    }
-  }
-
-  // Verificar si la hoja tiene más de 14 filas, lo que indicaría que F15 existe
-  var totalFilas = hojaDestino.getMaxRows();
-  if (totalFilas > 14 && hojaDestino.getRange('E14').getValue() === 'Tamaño Muestra.') {
-    logToSheet(nombreHojaLogs, 'ADVERTENCIA: Existe una filas adicionales que no deberían de estar presente.');
-  }
-}
-  
 function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
   const UI = SpreadsheetApp.getUi(); 
   try {
@@ -502,7 +499,9 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         textoCopiado.push(hojaOrigen.getRange(hojaOrigen.getRange('E14')).getValue().toString());
         logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "' + hojaOrigen.getRange('E14').getValue().toString() + '" de la hoja origen al campo: "' + hojaDestino.getRange('E14').getValue().toString() + '" de la hoja destino');
       }
-        
+      
+      verificarCeldas(hojaDestino, nombreHojaLogs);
+
       //Pega en el log los valores de los campos que se han ido cambiando en cada iteracion de cada control 
       for (var j = 2; j < datosNombres.length; j++) {
         if(datosNombres[j][0].trim().toLowerCase() === controlActual.trim().toLowerCase()) {
