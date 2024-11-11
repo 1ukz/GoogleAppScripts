@@ -1,4 +1,4 @@
-// CREATOR: LUCAS SAETA (@1ukz) - lucassaeta9@gmail.com
+// CREATOR: LUCAS SAETA (@1ukz) lucassaeta5@gmail.com
 
 function onOpen() {
   const UI = SpreadsheetApp.getUi(); 
@@ -86,7 +86,7 @@ function checkFormat(hoja, nombreHojaLogs, message){
   if(!(hoja.getRange('A1:F1').getValue().includes('DOCUMENTACIÓN DEL CONTROL') && hoja.getRange('A2').getValue().includes('Tipo de Control') && hoja.getRange('A6').getValue().includes('Descripción') && hoja.getRange('A8').getValue().includes('Evidencia') && hoja.getRange('A11:F11').getValue().includes('DESCRIPCIÓN DE LA PRUEBA A EJECUTAR') && hoja.getRange('A12').getValue().includes('Prueba a realizar') && hoja.getRange('E14').getValue().includes('Tamaño Muestra'))){
     
     updateFormat(hoja);
-    logToSheet(nombreHojaLogs, 'AVISO: Se ha actualizado el formato de la ' + message + ': "' + hoja.getName() + '" ya que no seguía el formato estándar.')
+    logToSheet(nombreHojaLogs, 'ADVERTENCIA: Se ha actualizado el formato de la ' + message + ': "' + hoja.getName() + '" ya que no seguía el formato estándar.')
   }
 }
 
@@ -175,7 +175,7 @@ function verificarCeldas(hojaDestino, nombreHojaLogs) {
   // Verificar si la hoja tiene más de 14 filas, lo que indicaría que F15 existe
   var totalFilas = hojaDestino.getMaxRows();
   if (totalFilas > 14 && hojaDestino.getRange('E14').getValue() === 'Tamaño Muestra.') {
-    logToSheet(nombreHojaLogs, 'ADVERTENCIA: Existe una filas adicionales que no deberían de estar presente.');
+    logToSheet(nombreHojaLogs, 'ADVERTENCIA: Existe una o unas filas adicionales que no deberían de estar presentes.');
   }
 }
 
@@ -232,7 +232,7 @@ function almacenarIDs(folderId, sheetName, nombreHojaLogs) {
   
           if (mimeType === MimeType.MICROSOFT_EXCEL) {
 
-            logToSheet(nombreHojaLogs, 'Error. El control: "' + subfolderName + '" tiene formato EXCEL y no se puede extraer su ID.');
+            logToSheet(nombreHojaLogs, 'ERROR. El control: "' + subfolderName + '" tiene formato EXCEL y no se puede extraer su ID.');
           } else {
             fileId = file.getId();
             spreadsheet = SpreadsheetApp.openById(fileId);
@@ -287,7 +287,7 @@ function almacenarIDs(folderId, sheetName, nombreHojaLogs) {
         var fileName;
   
         if (mimeType === MimeType.MICROSOFT_EXCEL) {
-            logToSheet(nombreHojaLogs, 'El control: "' + file + '" tiene formato EXCEL.');
+            logToSheet(nombreHojaLogs, 'ERROR. El control: "' + file + '" tiene formato EXCEL y no se puede extraer su ID.');
         } else {
           fileId = file.getId();
           fileName = file.getName();
@@ -396,10 +396,10 @@ function compararSheets(nombreHojaLogs, sheet1Name, sheet2Name, sheet2Location, 
             logToSheet(nombreHojaLogs, 'Control creado: "' + newName + '" con ID: "' + newId + '"');
             crearControlMenu = false;
           } catch (error) {
-            UI.alert('Error al copiar el control: "' + error.message + '"');
+            UI.alert('ERROR: Error general al copiar el control testeado: "' + error.message + '"');
           }
         }else{
-          logToSheet(nombreHojaLogs, 'Control no creado: "' + sheet1Name + '"');
+          logToSheet(nombreHojaLogs, 'ADVERTENCIA: Control no creado: "' + sheet1Name + '"');
           crearControlMenu = false;
         }
       }while(crearControlMenu);
@@ -438,10 +438,10 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         var archivoOrigen = SpreadsheetApp.openById(idOrigen);
         var hojaOrigen = archivoOrigen.getSheetByName(hojaOrigenNombre);
         if (!hojaOrigen) {
-          UI.alert('No se encontró la Hoja de origen con el nombre especificado: "' + hojaOrigenNombre + '"');
+          UI.alert('ERROR: No se encontró la hoja de origen con el nombre especificado: "' + hojaOrigenNombre + '"');
         }
       } catch (e) {
-        logToSheet(nombreHojaLogs, 'Error al abrir el archivo de origen con ID: "' + idOrigen + '" de la hoja origen: "' + hojaOrigenNombre);
+        logToSheet(nombreHojaLogs, 'ERROR al abrir el archivo de origen con ID: "' + idOrigen + '" de la hoja origen: "' + hojaOrigenNombre);
         continue;
       }
 
@@ -450,10 +450,10 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         var archivoDestino = SpreadsheetApp.openById(idDestino);
         var hojaDestino = archivoDestino.getSheetByName(hojaDestinoNombre);
         if (!hojaDestino) {
-          UI.alert('No se encontró la Hoja de destino con el nombre especificado: ' + hojaDestinoNombre);
+          UI.alert('No se encontró la hoja de destino con el nombre especificado: ' + hojaDestinoNombre);
         }
       } catch (e) {
-        logToSheet(nombreHojaLogs, 'Error al abrir el archivo de destino con ID: "' + idDestino + '" de la hoja destino: "' + hojaDestinoNombre);
+        logToSheet(nombreHojaLogs, 'ERROR al abrir el archivo de destino con ID: "' + idDestino + '" de la hoja destino: "' + hojaDestinoNombre);
         continue;
       }
 
@@ -475,8 +475,6 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
       ];
 
       var textoCopiado = [];  // Para almacenar los campos copiados y pegarlos al excel con los logs
-      var textoFrecuentasYMuestras = []; //Para el numero de frecuencias y muestras y pegarlos al excel con los logs
-      var textoSoloMuestras = [];
 
       for (var j = 0; j < celdas.length; j++) {
         var rangoOrigen = celdas[j].origen;
@@ -500,6 +498,7 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "' + hojaOrigen.getRange('E14').getValue().toString() + '" de la hoja origen al campo: "' + hojaDestino.getRange('E14').getValue().toString() + '" de la hoja destino');
       }
       
+      
       verificarCeldas(hojaDestino, nombreHojaLogs);
 
       //Pega en el log los valores de los campos que se han ido cambiando en cada iteracion de cada control 
@@ -509,14 +508,14 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
           // Columna donde queremos poner el resultado (la siguiente a la columna "OK")
           hojaAgenda.getRange(j+1, 3).setValue(textoCopiado.join(', '));
           //Columna donde ponemos frecuencias y numero de muestras
-          hojaAgenda.getRange(j+1, 4).setValue(textoFrecuentasYMuestras.join(', '));
-          hojaAgenda.getRange(j+1, 5).setValue(textoSoloMuestras);
+          hojaAgenda.getRange(j+1, 4).setValue(hojaDestino.getRange('D3').getValue().toString() + ', ' + hojaDestino.getRange('F14').getValue().toString());
+          hojaAgenda.getRange(j+1, 5).setValue(hojaDestino.getRange('F14').getValue().toString());
           logToSheet(nombreHojaLogs, 'Celda de la hoja principal actualizada con OK y campos copiados para "' + hojaDestinoNombre + '"');
         }
       }
     }
   } catch (e) {
-    UI.alert('Error general: ' + e.message);
+    UI.alert('ERROR: Error general durante el proceso de actualizar los controles: ' + e.message);
   }
 }
 
