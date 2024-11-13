@@ -1,5 +1,10 @@
 // CREATOR: LUCAS SAETA (@1ukz) lucassaeta5@gmail.com
 
+/**
+ * Esta función se ejecuta al abrir la hoja de cálculo. 
+ * Crea un menú personalizado llamado 'Update-Controls' en la interfaz de usuario de Google Sheets.
+ * Al seleccionar 'Ejecutar programa' en el menú, se invoca la función 'main'.
+ */
 function onOpen() {
   const UI = SpreadsheetApp.getUi(); 
 
@@ -8,6 +13,13 @@ function onOpen() {
     .addToUi();
 }
 
+/** FUNCIÓN AUXILIAR
+ * Crea una hoja de log en la hoja de cálculo activa.
+ * Si la hoja de registro ya existe, se limpia su contenido.
+ * Se registra la fecha y hora de la creación de la hoja en la celda A1.
+ *
+ * @param {string} nombreHojaLogs - El nombre para la hoja de registro que se va a crear o limpiar.
+ */
 function createLogSheet(nombreHojaLogs){
   const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
   const MAIN_SHEET = SpreadsheetApp.openById(ID);
@@ -21,10 +33,17 @@ function createLogSheet(nombreHojaLogs){
   var date = new Date();
   var cell = newLogSheet.getRange(1,1); 
   cell.setValue('Logs generados para la ejecución de: "' + nombreHojaLogs + '" a las ' + date.getHours() + ':' + date.getMinutes());
-  cell.setFontSize(14); // Ajusta el tamaño de la fuente según tus necesidades
+  cell.setFontSize(14); // Ajusta el tamanio de la fuente 
   cell.setFontWeight('bold'); // Aplica negrita al texto
 }
 
+/** FUNCIÓN AUXILIAR
+ * Registra un mensaje en la hoja de log especificada.
+ * Agrega el mensaje en la siguiente fila vacía de la hoja de registro.
+ *
+ * @param {string} nombreHoja - El nombre de la hoja donde se registrará el mensaje.
+ * @param {string} message - El mensaje que se va a registrar.
+ */
 function logToSheet(nombreHoja, message){
   const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
   const MAIN_SHEET = SpreadsheetApp.openById(ID);
@@ -35,6 +54,12 @@ function logToSheet(nombreHoja, message){
 
 }
 
+/** FUNCIÓN AUXILIAR
+ * Verifica si una hoja con el nombre especificado existe en la hoja de cálculo activa.
+ *
+ * @param {string} sheetName - El nombre de la hoja que se va a verificar.
+ * @return {boolean} - Retorna true si la hoja existe, de lo contrario false.
+ */
 function checkSheetExists(sheetName) {
   var sheets = SpreadsheetApp.getActiveSpreadsheet().getSheets();
   for (var i = 0; i < sheets.length; i++) {
@@ -45,6 +70,14 @@ function checkSheetExists(sheetName) {
   return false; // La hoja no existe
 }
 
+/** FUNCIÓN AUXILIAR
+ * Solicita al usuario un nombre de hoja a través de un cuadro de diálogo.
+ * Si el usuario cierra el diálogo, se retorna null. 
+ * Si el nombre de la hoja no existe, se solicita nuevamente.
+ *
+ * @param {string} mensaje - El mensaje que se mostrará en el cuadro de diálogo.
+ * @return {string|null} - Retorna el nombre de la hoja si existe, o null si se cierra el diálogo.
+ */
 function solicitarNombreHoja(mensaje) {
   const UI = SpreadsheetApp.getUi()
   var response;
@@ -61,6 +94,14 @@ function solicitarNombreHoja(mensaje) {
   return nombreHoja; // Retorna el nombre de la hoja si existe
 }
 
+/** FUNCIÓN AUXILIAR
+ * Muestra un cuadro de diálogo (pop-up) al usuario para preguntar una respuesta de sí o no.
+ * El usuario debe ingresar 'y' para sí o 'n' para no. 
+ * Si se ingresa una respuesta no válida, se solicita nuevamente.
+ *
+ * @param {string} mensaje - El mensaje que se mostrará en el pop-up.
+ * @return {boolean} - Retorna true si la respuesta es 'y', o false si la respuesta es 'n'.
+ */
 function preguntaMenu(mensaje) {
 
   const UI = SpreadsheetApp.getUi(); 
@@ -82,36 +123,60 @@ function preguntaMenu(mensaje) {
 
 }
 
+/** FUNCIÓN AUXILIAR
+ * Verifica si la hoja del control cumple con el formato estándar requerido.
+ * Si no cumple, actualiza el formato y registra una advertencia en la hoja de logs.
+ *
+ * @param {Object} hoja - La hoja de cálculo que se va a verificar.
+ * @param {string} nombreHojaLogs - El nombre de la hoja de logs donde se registrará la advertencia.
+ * @param {string} message - Mensaje descriptivo para el registro.
+ */
 function checkFormat(hoja, nombreHojaLogs, message){
+  //Si no cumple todas las especificaciones del formato estándar: 
   if(!(hoja.getRange('A1:F1').getValue().includes('DOCUMENTACIÓN DEL CONTROL') && hoja.getRange('A2').getValue().includes('Tipo de Control') && hoja.getRange('A6').getValue().includes('Descripción') && hoja.getRange('A8').getValue().includes('Evidencia') && hoja.getRange('A11:F11').getValue().includes('DESCRIPCIÓN DE LA PRUEBA A EJECUTAR') && hoja.getRange('A12').getValue().includes('Prueba a realizar') && hoja.getRange('E14').getValue().includes('Tamaño Muestra'))){
     
-    updateFormat(hoja);
+    //Actualiza la hoja del control
+    updateFormat(hoja); 
     logToSheet(nombreHojaLogs, 'ADVERTENCIA: Se ha actualizado el formato de la ' + message + ': "' + hoja.getName() + '" ya que no seguía el formato estándar.')
   }
 }
 
+/** FUNCIÓN AUXILIAR
+ * Actualiza el formato de la hoja según ciertas condiciones.
+ * Elimina filas o inserta nuevas filas según el contenido de las celdas.
+ *
+ * @param {Object} hoja - La hoja de cálculo que se va a actualizar.
+ */
 function updateFormat(hoja){
   const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
   const MAIN_SHEET = SpreadsheetApp.openById(ID);
   const UI = SpreadsheetApp.getUi();
   
-  //comparacion fila extra arriba
-
+  //Comparación fila extra arriba
   if(hoja.getRange('A3').getValue() === 'Tipo de Control' || hoja.getRange('A3').getValue() === 'Clase'){
 
     if(hoja.getRange('A2:F2').getValue().includes('DOCUMENTACIÓN DEL CONTROL')){
       hoja.deleteRow('1');
     }
   }
+
+  //Comparación fila anterior a descripción prubea a ejecutar
   if(hoja.getRange('A10:F10').getValue().includes('DESCRIPCIÓN DE LA PRUEBA A EJECUTAR') && hoja.getRange('A9').getValue().includes('Evidencia. Actualizaciones')){
 
     hoja.insertRowBefore(10);
-    hoja.getRange('A10:F10').setBackground(null);  // restablece el fondo de la nueva fila en blanco
-    hoja.getRange('A10:F10').mergeAcross();  // fusionar las celdas en la nueva fila
+    hoja.getRange('A10:F10').setBackground(null);  // Restablece el fondo de la nueva fila en blanco
+    hoja.getRange('A10:F10').mergeAcross();  // Fusiona las celdas en la nueva fila
   }
 
 }
 
+/** FUNCIÓN AUXILIAR
+ * Verifica el contenido de celdas específicas en la hoja de destino (control documentado).
+ * Registra advertencias en la hoja de logs si las celdas no cumplen con lo esperado.
+ *
+ * @param {Object} hojaDestino - La hoja de cálculo que se va a verificar.
+ * @param {string} nombreHojaLogs - El nombre de la hoja de logs donde se registrarán las advertencias.
+ */
 function verificarCeldas(hojaDestino, nombreHojaLogs) {
 
   var celdasAComprobar = [
@@ -179,133 +244,162 @@ function verificarCeldas(hojaDestino, nombreHojaLogs) {
   }
 }
 
+/** FUNCIÓN AUXILIAR
+ * Almacena los IDs de los controles en una hoja de cálculo a partir de los archivos en carpetas en una carpeta de Google Drive.
+ * Crea o limpia una hoja especificada y registra los IDs de los archivos de Google Sheets y Excel.
+ * Contiene también una función auxiliar dentro de la función para quitar lo que sobre al nombre del
+ control (cleanControlName).
+ * 
+ * @param {string} folderId - El ID de la carpeta en Google Drive que contiene las carpetas con    
+ archivos.
+ * @param {string} sheetName - El nombre de la hoja donde se almacenarán los IDs.
+ * @param {string} nombreHojaLogs - El nombre de la hoja de logs donde se registrarán las acciones realizadas.
+ */
 function almacenarIDs(folderId, sheetName, nombreHojaLogs) {
-    const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
-    const MAIN_SHEET = SpreadsheetApp.openById(ID);
-    const UI = SpreadsheetApp.getUi(); 
+  const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+  const MAIN_SHEET = SpreadsheetApp.openById(ID);
+  const UI = SpreadsheetApp.getUi(); 
 
-    var newSheet = MAIN_SHEET.getSheetByName(sheetName);
-    UI.alert('Capturando los IDs de los Controles en: "' + folderId + '" en la Hoja: "' + sheetName + '". \n\nPOR FAVOR, ESPERE PACIENTEMENTE HASTA EL PRÓXIMO POP-UP QUE INDICANDO QUE EL PROCESO HA TERMINADO. \n\nSe ha generado una Hoja con los Logs de lo realizado para esta ejecución, disponible en: "' + nombreHojaLogs + '"');
-    if (!newSheet) {
-      newSheet = MAIN_SHEET.insertSheet(sheetName);
-    } else {
-      newSheet.clear();
-    }
-  
-    var folder = DriveApp.getFolderById(folderId);
-    var folderName = folder.getName();
-  
-    newSheet.getRange(1, 1).setValue(folderName);
-    newSheet.getRange(2, 1).setValue("ID de control");
-    newSheet.getRange(2, 2).setValue("Hoja de control");
-    newSheet.getRange(2, 3).setValue("Nombre de Sheet");
-  
-    var row = 3;
-  
-    function cleanControlName(name) {
-      var patterns = ["_PASA", "_FALLA", "_INCONCLUSO"];
-      for (var i = 0; i < patterns.length; i++) {
-        var index = name.indexOf(patterns[i]);
-        if (index !== -1) {
-          return name.substring(0, index);
-        }
-      }
-      return name;
-    }
-  
-    var subfolders = folder.getFolders();
-
-    while (subfolders.hasNext()) {
-      var subfolder = subfolders.next();
-      var subfolderId = subfolder.getId();
-      var subfolderName = cleanControlName(subfolder.getName());
-  
-      // Obtener todos los archivos de Google Sheets y Excel
-      var files = subfolder.getFiles();
-      while (files.hasNext()) {
-        var file = files.next();
-        var mimeType = file.getMimeType();
-  
-        if (mimeType === MimeType.GOOGLE_SHEETS || mimeType === MimeType.MICROSOFT_EXCEL) {
-          var fileId;
-          var spreadsheet;
-  
-          if (mimeType === MimeType.MICROSOFT_EXCEL) {
-
-            logToSheet(nombreHojaLogs, 'ERROR. El control: "' + subfolderName + '" tiene formato EXCEL y no se puede extraer su ID.');
-          } else {
-            fileId = file.getId();
-            spreadsheet = SpreadsheetApp.openById(fileId);
-          
-  
-          var firstSheetName = spreadsheet.getSheets()[0].getName();
-  
-          newSheet.getRange(row, 1).setValue(fileId);
-          newSheet.getRange(row, 2).setValue(firstSheetName);
-          newSheet.getRange(row, 3).setValue(subfolderName);
-          logToSheet(nombreHojaLogs, 'Se ha copiado el ID del control: "' + subfolderName + '" correctamente.');
-          row++;
-          }
-        }
-      }
-    }
+  var newSheet = MAIN_SHEET.getSheetByName(sheetName);
+  UI.alert('Capturando los IDs de los Controles en: "' + folderId + '" en la Hoja: "' + sheetName + '". \n\nPOR FAVOR, ESPERE PACIENTEMENTE HASTA EL PRÓXIMO POP-UP QUE INDICANDO QUE EL PROCESO HA TERMINADO. \n\nSe ha generado una Hoja con los Logs de lo realizado para esta ejecución, disponible en: "' + nombreHojaLogs + '"');
+  if (!newSheet) {
+    newSheet = MAIN_SHEET.insertSheet(sheetName);
+  } else {
+    newSheet.clear();
   }
-  
-  function almacenarIDsDocus(folderId, sheetName, nombreHojaLogs) {
-    const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
-    const MAIN_SHEET = SpreadsheetApp.openById(ID);
-    const UI = SpreadsheetApp.getUi(); 
 
-    UI.alert('Capturando los IDs de los Controles en: "' + folderId + '" en la Hoja: "' + sheetName + '". \n\nPOR FAVOR, ESPERE PACIENTEMENTE HASTA EL PRÓXIMO POP-UP INDICANDO QUE EL PROCESO HA TERMINADO. \n\nSe ha generado una Hoja con los Logs de lo realizado para esta ejecución, disponible en: "' + nombreHojaLogs + '"');
-    var newSheet = MAIN_SHEET.getSheetByName(sheetName);
-    
-    if (!newSheet) {
-      newSheet = MAIN_SHEET.insertSheet(sheetName);
-    } else {
-      newSheet.clear();
+  var folder = DriveApp.getFolderById(folderId);
+  var folderName = folder.getName();
+
+  newSheet.getRange(1, 1).setValue(folderName);
+  newSheet.getRange(2, 1).setValue("ID de control");
+  newSheet.getRange(2, 2).setValue("Hoja de control");
+  newSheet.getRange(2, 3).setValue("Nombre de Sheet");
+
+  var row = 3;
+
+  function cleanControlName(name) {
+    var patterns = ["_PASA", "_FALLA", "_INCONCLUSO"];
+    for (var i = 0; i < patterns.length; i++) {
+      var index = name.indexOf(patterns[i]);
+      if (index !== -1) {
+        return name.substring(0, index);
+      }
     }
-  
-    var folder = DriveApp.getFolderById(folderId);
-    var folderName = folder.getName();
-  
-    newSheet.getRange(1, 1).setValue(folderName);
-    newSheet.getRange(2, 1).setValue("ID de control");
-    newSheet.getRange(2, 2).setValue("Hoja de control");
-    newSheet.getRange(2, 3).setValue("Nombre de Sheet");
-  
-    var row = 3;
-  
+    return name;
+  }
+
+  var subfolders = folder.getFolders();
+
+  while (subfolders.hasNext()) {
+    var subfolder = subfolders.next();
+    var subfolderId = subfolder.getId();
+    var subfolderName = cleanControlName(subfolder.getName());
+
     // Obtener todos los archivos de Google Sheets y Excel
-    var files = folder.getFiles();
+    var files = subfolder.getFiles();
     while (files.hasNext()) {
       var file = files.next();
       var mimeType = file.getMimeType();
-      
+
       if (mimeType === MimeType.GOOGLE_SHEETS || mimeType === MimeType.MICROSOFT_EXCEL) {
         var fileId;
         var spreadsheet;
-        var fileName;
-  
+
         if (mimeType === MimeType.MICROSOFT_EXCEL) {
-            logToSheet(nombreHojaLogs, 'ERROR. El control: "' + file + '" tiene formato EXCEL y no se puede extraer su ID.');
+
+          logToSheet(nombreHojaLogs, 'ERROR. El control: "' + subfolderName + '" tiene formato EXCEL y no se puede extraer su ID.');
         } else {
           fileId = file.getId();
-          fileName = file.getName();
           spreadsheet = SpreadsheetApp.openById(fileId);
         
-  
+
         var firstSheetName = spreadsheet.getSheets()[0].getName();
-  
+
         newSheet.getRange(row, 1).setValue(fileId);
         newSheet.getRange(row, 2).setValue(firstSheetName);
-        newSheet.getRange(row, 3).setValue(fileName);
-        logToSheet(nombreHojaLogs, 'Se ha copiado el ID del control: "' + fileName + '" correctamente.');
+        newSheet.getRange(row, 3).setValue(subfolderName);
+        logToSheet(nombreHojaLogs, 'Se ha copiado el ID del control: "' + subfolderName + '" correctamente.');
         row++;
         }
       }
     }
   }
+}
+
+/** FUNCIÓN AUXILIAR
+ * Almacena los IDs de los documentos en una hoja de cálculo a partir de los archivos en una carpeta de Google Drive.
+ * Crea o limpia una hoja especificada y registra los IDs de los archivos de Google Sheets y Excel.
+ *
+ * @param {string} folderId - El ID de la carpeta en Google Drive que contiene los archivos.
+ * @param {string} sheetName - El nombre de la hoja donde se almacenarán los IDs.
+ * @param {string} nombreHojaLogs - El nombre de la hoja de logs donde se registrarán las acciones realizadas.
+ */
+function almacenarIDsDocus(folderId, sheetName, nombreHojaLogs) {
+  const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+  const MAIN_SHEET = SpreadsheetApp.openById(ID);
+  const UI = SpreadsheetApp.getUi(); 
+
+  UI.alert('Capturando los IDs de los Controles en: "' + folderId + '" en la Hoja: "' + sheetName + '". \n\nPOR FAVOR, ESPERE PACIENTEMENTE HASTA EL PRÓXIMO POP-UP INDICANDO QUE EL PROCESO HA TERMINADO. \n\nSe ha generado una Hoja con los Logs de lo realizado para esta ejecución, disponible en: "' + nombreHojaLogs + '"');
+  var newSheet = MAIN_SHEET.getSheetByName(sheetName);
   
+  if (!newSheet) {
+    newSheet = MAIN_SHEET.insertSheet(sheetName);
+  } else {
+    newSheet.clear();
+  }
+
+  var folder = DriveApp.getFolderById(folderId);
+  var folderName = folder.getName();
+
+  newSheet.getRange(1, 1).setValue(folderName);
+  newSheet.getRange(2, 1).setValue("ID de control");
+  newSheet.getRange(2, 2).setValue("Hoja de control");
+  newSheet.getRange(2, 3).setValue("Nombre de Sheet");
+
+  var row = 3;
+
+  // Obtener todos los archivos de Google Sheets y Excel
+  var files = folder.getFiles();
+  while (files.hasNext()) {
+    var file = files.next();
+    var mimeType = file.getMimeType();
+    
+    if (mimeType === MimeType.GOOGLE_SHEETS || mimeType === MimeType.MICROSOFT_EXCEL) {
+      var fileId;
+      var spreadsheet;
+      var fileName;
+
+      if (mimeType === MimeType.MICROSOFT_EXCEL) {
+          logToSheet(nombreHojaLogs, 'ERROR. El control: "' + file + '" tiene formato EXCEL y no se puede extraer su ID.');
+      } else {
+        fileId = file.getId();
+        fileName = file.getName();
+        spreadsheet = SpreadsheetApp.openById(fileId);
+      
+
+      var firstSheetName = spreadsheet.getSheets()[0].getName();
+
+      newSheet.getRange(row, 1).setValue(fileId);
+      newSheet.getRange(row, 2).setValue(firstSheetName);
+      newSheet.getRange(row, 3).setValue(fileName);
+      logToSheet(nombreHojaLogs, 'Se ha copiado el ID del control: "' + fileName + '" correctamente.');
+      row++;
+      }
+    }
+  }
+}
+
+/** FUNCIÓN AUXILIAR
+ * Compara los datos de dos hojas de cálculo (la de los IDs) y registra las coincidencias en una nueva hoja.
+ * Si no se encuentra una coincidencia, pregunta al usuario si desea crear un nuevo control.
+ *
+ * @param {string} nombreHojaLogs - El nombre de la hoja de logs donde se registrarán las acciones realizadas.
+ * @param {string} sheet1Name - El nombre de la primera hoja a comparar (siempre debe ser la de controles testeados).
+ * @param {string} sheet2Name - El nombre de la segunda hoja a comparar (siempre debe ser la de los controles documentados).
+ * @param {string} sheet2Location - La ubicación de la carpeta (de los controles documentados) donde se pueden crear nuevos controles.
+ * @param {string} newSheetName - El nombre de la nueva hoja donde se registrarán los resultados de la comparación (la hoja del mapeo).
+ */  
 function compararSheets(nombreHojaLogs, sheet1Name, sheet2Name, sheet2Location, newSheetName) { 
 
   const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
@@ -406,7 +500,15 @@ function compararSheets(nombreHojaLogs, sheet1Name, sheet2Name, sheet2Location, 
     }
   }
 }
-  
+
+/** FUNCIÓN AUXILIAR
+ * Copia celdas específicas desde una hoja de control (control testeado) a la otra hoja del control documentado.
+ * Verifica que los formatos sean correctos y registra los cambios en una hoja de logs.
+ *
+ * @param {string} nombreHojaLogs - El nombre de la hoja de logs donde se registrarán las acciones realizadas.
+ * @param {string} idFile - El nombre de la hoja que contiene los IDs (la hoja del mapeo de controles).
+ * @param {string} nombreHojaPrincipal - El nombre de la hoja principal donde se registrarán los resultados.
+ */  
 function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
   const UI = SpreadsheetApp.getUi(); 
   try {
@@ -519,6 +621,11 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
   }
 }
 
+/** FUNCIÓN PRINCIPAL
+ * Gestiona el menú de opciones para el usuario.
+ * Permite al usuario seleccionar diferentes acciones relacionadas con el manejo de controles documentados y testeados.
+ * Las opciones incluyen copiar IDs de controles, comparar controles y actualizar controles documentados.
+ */
 function main(){
   const ID = SpreadsheetApp.getActiveSpreadsheet().getId();
   const MAIN_SHEET = SpreadsheetApp.openById(ID);
