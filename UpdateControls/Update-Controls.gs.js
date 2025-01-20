@@ -298,30 +298,28 @@ function almacenarIDs(folderId, sheetName, nombreHojaLogs) {
 
     // Obtener todos los archivos de Google Sheets y Excel
     var files = subfolder.getFiles();
+
     while (files.hasNext()) {
       var file = files.next();
       var mimeType = file.getMimeType();
 
-      if (mimeType === MimeType.GOOGLE_SHEETS || mimeType === MimeType.MICROSOFT_EXCEL) {
         var fileId;
         var spreadsheet;
 
         if (mimeType === MimeType.MICROSOFT_EXCEL) {
-
           logToSheet(nombreHojaLogs, 'ERROR. El control: "' + subfolderName + '" tiene formato EXCEL y no se puede extraer su ID.');
-        } else {
+        } else if (mimeType === MimeType.GOOGLE_SHEETS) {
           fileId = file.getId();
-          spreadsheet = SpreadsheetApp.openById(fileId);
-        
-
-        var firstSheetName = spreadsheet.getSheets()[0].getName();
-
-        newSheet.getRange(row, 1).setValue(fileId);
-        newSheet.getRange(row, 2).setValue(firstSheetName);
-        newSheet.getRange(row, 3).setValue(subfolderName);
-        logToSheet(nombreHojaLogs, 'Se ha copiado el ID del control: "' + subfolderName + '" correctamente.');
-        row++;
-        }
+          spreadsheet = SpreadsheetApp.openById(fileId);  
+          var firstSheetName = spreadsheet.getSheets()[0].getName();
+          newSheet.getRange(row, 1).setValue(fileId);
+          newSheet.getRange(row, 2).setValue(firstSheetName);
+          newSheet.getRange(row, 3).setValue(subfolderName);
+          logToSheet(nombreHojaLogs, 'Se ha copiado el ID del control: "' + subfolderName + '" correctamente.');
+          row++;
+        } else {
+          // Si es un archivo no reconocido, registrar en el log
+          logToSheet(nombreHojaLogs, 'ERROR. El control: "' + subfolderName + '" posiblemente contenga un acceso directo en vez de un archivo, o no contiene ningún archivo sheet/excel en la carpeta. Se recomienda revisar este control y añadir el fichero.');
       }
     }
   }
@@ -365,27 +363,25 @@ function almacenarIDsDocus(folderId, sheetName, nombreHojaLogs) {
     var file = files.next();
     var mimeType = file.getMimeType();
     
-    if (mimeType === MimeType.GOOGLE_SHEETS || mimeType === MimeType.MICROSOFT_EXCEL) {
-      var fileId;
-      var spreadsheet;
-      var fileName;
+    var fileId;
+    var spreadsheet;
+    var fileName;
 
-      if (mimeType === MimeType.MICROSOFT_EXCEL) {
-          logToSheet(nombreHojaLogs, 'ERROR. El control: "' + file + '" tiene formato EXCEL y no se puede extraer su ID.');
-      } else {
-        fileId = file.getId();
-        fileName = file.getName();
-        spreadsheet = SpreadsheetApp.openById(fileId);
-      
-
+    if (mimeType === MimeType.MICROSOFT_EXCEL) {
+      logToSheet(nombreHojaLogs, 'ERROR. El control: "' + file + '" tiene formato EXCEL y no se puede extraer su ID.');
+    } else if (mimeType === MimeType.GOOGLE_SHEETS){
+      fileId = file.getId();
+      fileName = file.getName();
+      spreadsheet = SpreadsheetApp.openById(fileId);
       var firstSheetName = spreadsheet.getSheets()[0].getName();
-
       newSheet.getRange(row, 1).setValue(fileId);
       newSheet.getRange(row, 2).setValue(firstSheetName);
       newSheet.getRange(row, 3).setValue(fileName);
       logToSheet(nombreHojaLogs, 'Se ha copiado el ID del control: "' + fileName + '" correctamente.');
       row++;
-      }
+    } else {
+      // Si es un archivo no reconocido, registrar en el log
+      logToSheet(nombreHojaLogs, 'ERROR. El fichero: "' + file + '" no es un archivo sheet/excel. No se tendrá en cuenta ni registrará su ID.');
     }
   }
 }
@@ -559,61 +555,77 @@ function copiarCeldasDesdeControl(nombreHojaLogs, idFile, nombreHojaPrincipal) {
         continue;
       }
 
+      try {
       //Verificar que los ficheros siguen el formato estandar y sino retocarlos
       checkFormat(hojaOrigen, nombreHojaLogs, 'hoja origen'); 
       checkFormat(hojaDestino, nombreHojaLogs, 'hoja destino');
-    
-
-      var celdas = [
-        {nombreOrigen: 'A4', origen: 'A5', nombreDestino: 'A2', destino: 'A3'},
-        {nombreOrigen: 'B4', origen: 'B5', nombreDestino: 'B2', destino: 'B3'},
-        {nombreOrigen: 'C4', origen: 'C5', nombreDestino: 'C2', destino: 'C3'},
-        {nombreOrigen: 'D4', origen: 'D5', nombreDestino: 'D2', destino: 'D3'},
-        {nombreOrigen: 'E4', origen: 'E5', nombreDestino: 'E2', destino: 'E3'},
-        {nombreOrigen: 'F4', origen: 'F5', nombreDestino: 'F2', destino: 'F3'},
-        {nombreOrigen: 'A7', origen: 'B7:F7', nombreDestino: 'A6', destino: 'B6:F6'},
-        {nombreOrigen: 'A9', origen: 'B9:F9', nombreDestino: 'A8', destino: 'B8:F8'},
-        {nombreOrigen: 'A13', origen: 'B13:F13', nombreDestino: 'A12', destino: 'B12:F12'}
-      ];
-
-      var textoCopiado = [];  // Para almacenar los campos copiados y pegarlos al excel con los logs
-
-      for (var j = 0; j < celdas.length; j++) {
-        var rangoOrigen = celdas[j].origen;
-        var rangoDestino = celdas[j].destino;
-        var valores = hojaOrigen.getRange(rangoOrigen).getValues();
-        //Verifica si existen valores en el campo origen en los campos de actualizaciones
-        var hayValores = valores.some(fila => fila.some(valor => valor.trim() !== ''));
-          
-        //Si existe algo (es decir, ha habido un cambio y se ha rellenado la celda correspondiente) 
-        if (hayValores) {
-          hojaDestino.getRange(rangoDestino).setValues(valores);
-          textoCopiado.push(hojaOrigen.getRange(celdas[j].nombreOrigen).getValue().toString());
-          logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "' + hojaOrigen.getRange(celdas[j].nombreOrigen).getValue().toString() + '" de la hoja origen al campo: "' + hojaDestino.getRange(celdas[j].nombreDestino).getValue().toString() + '" de la hoja destino');
-        }
+      } catch (e) {
+        logToSheet(nombreHojaLogs, 'ERROR al verificar que los ficheros siguen el formato estandar. Hoja destino: ' + hojaDestinoNombre + ', Hoja origen: ' + hojaOrigenNombre);
+        continue;
       }
 
-      //para comparar muestra tamanio
-      if(hojaOrigen.getRange('F14').getValue() !== hojaDestino.getRange('F14').getValue()){
-        hojaDestino.getRange('F14').setValue(hojaOrigen.getRange('F14').getValue());
-        textoCopiado.push(hojaOrigen.getRange(hojaOrigen.getRange('E14')).getValue().toString());
-        logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "' + hojaOrigen.getRange('E14').getValue().toString() + '" de la hoja origen al campo: "' + hojaDestino.getRange('E14').getValue().toString() + '" de la hoja destino');
-      }
-      
-      
-      verificarCeldas(hojaDestino, nombreHojaLogs);
+      try {
+        var celdas = [
+          {nombreOrigen: 'A4', origen: 'A5', nombreDestino: 'A2', destino: 'A3'},
+          {nombreOrigen: 'B4', origen: 'B5', nombreDestino: 'B2', destino: 'B3'},
+          {nombreOrigen: 'C4', origen: 'C5', nombreDestino: 'C2', destino: 'C3'},
+          {nombreOrigen: 'D4', origen: 'D5', nombreDestino: 'D2', destino: 'D3'},
+          {nombreOrigen: 'E4', origen: 'E5', nombreDestino: 'E2', destino: 'E3'},
+          {nombreOrigen: 'F4', origen: 'F5', nombreDestino: 'F2', destino: 'F3'},
+          {nombreOrigen: 'A7', origen: 'B7:F7', nombreDestino: 'A6', destino: 'B6:F6'},
+          {nombreOrigen: 'A9', origen: 'B9:F9', nombreDestino: 'A8', destino: 'B8:F8'},
+          {nombreOrigen: 'A13', origen: 'B13:F13', nombreDestino: 'A12', destino: 'B12:F12'}
+        ];
 
-      //Pega en el log los valores de los campos que se han ido cambiando en cada iteracion de cada control 
-      for (var j = 2; j < datosNombres.length; j++) {
-        if(datosNombres[j][0].trim().toLowerCase() === controlActual.trim().toLowerCase()) {
-          hojaAgenda.getRange(j+1, 2).setValue('OK');          
-          // Columna donde queremos poner el resultado (la siguiente a la columna "OK")
-          hojaAgenda.getRange(j+1, 3).setValue(textoCopiado.join(', '));
-          //Columna donde ponemos frecuencias y numero de muestras
-          hojaAgenda.getRange(j+1, 4).setValue(hojaDestino.getRange('D3').getValue().toString() + ', ' + hojaDestino.getRange('F14').getValue().toString());
-          hojaAgenda.getRange(j+1, 5).setValue(hojaDestino.getRange('F14').getValue().toString());
-          logToSheet(nombreHojaLogs, 'Celda de la hoja principal actualizada con OK y campos copiados para "' + hojaDestinoNombre + '"');
+        var textoCopiado = [];  // Para almacenar los campos copiados y pegarlos al excel con los logs
+        try {
+          for (var j = 0; j < celdas.length; j++) {
+            var rangoOrigen = celdas[j].origen;
+            var rangoDestino = celdas[j].destino;
+            var valores = hojaOrigen.getRange(rangoOrigen).getValues();
+            //Verifica si existen valores en el campo origen en los campos de actualizaciones
+            var hayValores = valores.some(fila => fila.some(valor => valor.trim() !== ''));
+              
+            //Si existe algo (es decir, ha habido un cambio y se ha rellenado la celda correspondiente) 
+            if (hayValores) {
+              hojaDestino.getRange(rangoDestino).setValues(valores);
+              textoCopiado.push(hojaOrigen.getRange(celdas[j].nombreOrigen).getValue().toString());
+              logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "' + hojaOrigen.getRange(celdas[j].nombreOrigen).getValue().toString() + '" de la hoja origen al campo: "' + hojaDestino.getRange(celdas[j].nombreDestino).getValue().toString() + '" de la hoja destino');
+            }
+          }
+        } catch (e) {
+          UI.alert('ERROR: Error durante el proceso de ver si existen actualizaciones en la hoja origen: ' + hojaOrigenNombre + ', y la hoja destino:' + hojaDestinoNombre + '. El error es: ' + e.message);
         }
+
+        //para comparar muestra tamanio
+        if(hojaOrigen.getRange('F14').getValue() !== hojaDestino.getRange('F14').getValue()){
+          hojaDestino.getRange('F14').setValue(hojaOrigen.getRange('F14').getValue());
+          textoCopiado.push(hojaOrigen.getRange(hojaOrigen.getRange('E14')).getValue().toString());
+          logToSheet(nombreHojaLogs, 'Se ha copiado el campo: "' + hojaOrigen.getRange('E14').getValue().toString() + '" de la hoja origen al campo: "' + hojaDestino.getRange('E14').getValue().toString() + '" de la hoja destino');
+        }
+        
+        
+        verificarCeldas(hojaDestino, nombreHojaLogs);
+        try {
+          //Pega en el log los valores de los campos que se han ido cambiando en cada iteracion de cada control 
+          for (var j = 2; j < datosNombres.length; j++) {
+            if(datosNombres[j][0].trim().toLowerCase() === controlActual.trim().toLowerCase()) {
+              hojaAgenda.getRange(j+1, 2).setValue('OK');          
+              // Columna donde queremos poner el resultado (la siguiente a la columna "OK")
+              hojaAgenda.getRange(j+1, 3).setValue(textoCopiado.join(', '));
+              //Columna donde ponemos frecuencias y numero de muestras
+              hojaAgenda.getRange(j+1, 4).setValue(hojaDestino.getRange('D3').getValue().toString() + ', ' + hojaDestino.getRange('F14').getValue().toString());
+              hojaAgenda.getRange(j+1, 5).setValue(hojaDestino.getRange('F14').getValue().toString());
+              logToSheet(nombreHojaLogs, 'Celda de la hoja principal actualizada con OK y campos copiados para "' + hojaDestinoNombre + '"');
+            }
+          }
+        } catch (e) {
+          UI.alert('ERROR: Error durante el proceso de actualizar la hoja principal con OK en la fila correspondiente al control: ' + hojaDestinoNombre + 'El error es: ' + e.message);
+        }
+
+      } catch (e) {
+        logToSheet(nombreHojaLogs, 'ERROR al copiar los datos de la hoja origen a la hoja destino: ' + hojaDestinoNombre + ', Hoja origen: ' + hojaOrigenNombre + '. El error es: ' + e.message);
+        continue;
       }
     }
   } catch (e) {
