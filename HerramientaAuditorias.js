@@ -1,4 +1,4 @@
-// CREATOR: LUCAS SAETA (@1ukz) lucassaeta5@gmail.com
+// CREATOR: LUCAS SAETA (@1ukz) 
 
 /**
  * Esta función se ejecuta al abrir la hoja de cálculo. 
